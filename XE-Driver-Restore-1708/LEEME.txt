@@ -1,0 +1,2 @@
+RESTORE exclusivo Xbox One 1708 045E:02EA.
+Ejecuta el BAT; solicita administrador automáticamente.
