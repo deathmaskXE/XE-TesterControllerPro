@@ -1,0 +1,1 @@
+Ejecuta RESTAURAR-XBOX.bat. La ventana queda abierta y se crea XE-Driver-Restore.log.
