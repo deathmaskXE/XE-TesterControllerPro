@@ -1,18 +1,12 @@
-# XE Controller Lab Pro v2
+# XE Tester Pro Auto
 
-Diagnóstico web para mandos. La interfaz usa negro, cyan neón y plata.
+Rediseño automático para escritorio y móvil.
 
-## Xbox One 1708 · flujo DriftGuard
+- Diagnóstico secuencial automático: joysticks → gatillos → botones → XE Score.
+- Perfil dedicado Xbox Elite Series 2 y perfiles normalizados.
+- Monitor RAW para identificar mapeos no estándar.
+- Resultado y PDF preparados automáticamente al terminar.
+- Botón Enviar al Taller XE con WhatsApp 747 173 1852.
+- En PC: usar Chrome o Edge, mantener la pestaña visible y presionar un botón después de conectar el mando.
 
-La calibración del 1708 pertenece a DriftGuard. XE Controller Lab Pro solo integra el flujo:
-
-1. Selecciona **Abrir DriftGuard** y completa la calibración en su sitio.
-2. Selecciona **He terminado la calibración**. XE descarga el restaurador incluido para el driver Xbox original.
-3. Ejecuta `RESTAURAR-XBOX-1708.bat` como administrador y reconecta el control.
-4. La aplicación detecta el control mediante Gamepad API e inicia el test de circularidad.
-
-Una página web no puede ejecutar archivos `.bat`/PowerShell ni modificar drivers de Windows sin intervención del usuario; el restaurador sigue estando bloqueado al VID/PID `045E:02EA`.
-
-## Xbox Series 1914
-
-El flujo y la calibración existentes del Xbox Series 1914 (`045E:0B12`) se conservan sin cambios.
+Nota: los paddles/perfiles internos del Elite Series 2 no siempre son expuestos por la Gamepad API del navegador.
