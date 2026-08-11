@@ -38,7 +38,7 @@ renderReport(){if(!this.finished)return;let name=document.getElementById("client
 async pdf(){
 let name=document.getElementById("clientName").value||"No especificado",serial=document.getElementById("serial").value||"No especificado";
 if(!window.jspdf){window.print();return}let {jsPDF}=window.jspdf,doc=new jsPDF({unit:"mm",format:"a4"}),W=210;
-const G=[183,139,36],D=[18,18,18],Y=[95,95,95],L=[218,218,214],OK=[38,132,82],BAD=[184,56,62],P=[249,249,247];
+const G=[0,152,239],D=[115,230,113],Y=[230,230,230],L=[200,70,94],OK=[38,132,82],BAD=[184,56,62],P=[230,70,94];
 const t=(v,x,y,s=8,st="normal",c=D,al="left")=>{doc.setFont("helvetica",st);doc.setFontSize(s);doc.setTextColor(...c);doc.text(String(v),x,y,{align:al})};
 const bx=(x,y,w,h,f=[255,255,255],c=L)=>{doc.setFillColor(...f);doc.setDrawColor(...c);doc.roundedRect(x,y,w,h,1.5,1.5,"FD")};
 const ln=(x1,y1,x2,y2,c=L)=>{doc.setDrawColor(...c);doc.line(x1,y1,x2,y2)};
@@ -47,20 +47,20 @@ const bar=(lab,v,x,y,w=67)=>{t(lab,x,y,6.2,"bold",Y);bx(x,y+1.8,w,3.8,[236,236,2
 let folio=serial==="No especificado"?"XE-"+Date.now().toString().slice(-8):serial;
 let lh=pc(100-this.data.ls.centerValue*500-Math.max(0,90-this.data.ls.max*100)),rh=pc(100-this.data.rs.centerValue*500-Math.max(0,90-this.data.rs.max*100));
 doc.setFillColor(...D);doc.rect(0,0,W,30,"F");doc.setFillColor(...G);doc.rect(0,29,W,1,"F");
-t("XE",14,13,19,"bold",G);t("CONTROLLER LAB PRO",34,13,14,"bold",[225,225,225]);t("PROFESSIONAL CONTROLLER DIAGNOSTIC REPORT",14,21,6.5,"bold",[155,155,155]);
-t("XE SERVICIO ELECTRÓNICO",196,12,7,"bold",G,"right");t("CHILPANCINGO, GUERRERO",196,19,6,"normal",[160,160,160],"right");
+t("TF",14,13,19,"bold",G);t("CONTROL DE CALIDAD",34,13,14,"bold",[225,225,225]);t("REPORTE DIAGNOSTICO PROFESIONAL DE CONTROLES",14,21,6.5,"bold",[155,155,155]);
+t("SERVICIO ELECTRÓNICO TWINFIX",196,12,7,"bold",G,"right");t("Ciudad Mante, Tamaulipas.",196,19,6,"normal",[160,160,160],"right");
 t("REPORTE TÉCNICO DE DIAGNÓSTICO",14,40,11,"bold");t("FOLIO "+folio,196,40,7,"bold",G,"right");ln(14,44,196,44,[205,185,125]);
 t("CLIENTE",14,50,6,"bold",Y);t(fit(name,32),14,55,8,"bold");t("CONTROL",75,50,6,"bold",Y);t(fit(this.profile.name,34),75,55,8,"bold");t("PERFIL",142,50,6,"bold",Y);t(fit(this.profile.label,20),142,55,8,"bold");
-bx(14,62,182,31,P,[205,185,125]);t("XE SCORE",21,70,7,"bold",G);t(this.data.score+"/100",21,83,20,"bold");t(this.data.classification,62,75,15,"bold",this.data.score>=80?OK:BAD);
-t(this.data.score>=80?"Protocolo XE completado. Consulte mediciones y hallazgos técnicos.":"Se detectaron parámetros que requieren revisión técnica.",62,83,7,"normal",Y);t(new Date().toLocaleString("es-MX"),189,88,6,"normal",Y,"right");
-t("MEDICIONES PRINCIPALES",14,101,9,"bold");bx(14,106,88,43);bx(108,106,88,43);t("JOYSTICKS",20,114,7,"bold",G);bar("LS RANGO",this.data.ls.max*100,20,120,52);bar("RS RANGO",this.data.rs.max*100,20,132,52);
+bx(14,62,182,31,P,[205,185,125]);t("Puntuación TwinFix",21,70,7,"bold",G);t(this.data.score+"/100",21,83,20,"bold");t(this.data.classification,62,75,15,"bold",this.data.score>=80?OK:BAD);
+t(this.data.score>=80?"Protocolo TWINFIX Completado. Consulte mediciones y hallazgos técnicos.":"Se detectaron parámetros que requieren revisión técnica.",62,83,7,"normal",Y);t(new Date().toLocaleString("es-MX"),189,88,6,"normal",Y,"right");
+t("MEDICIONES PRINCIPALES",14,101,9,"bold");bx(14,106,88,43);bx(108,106,88,43);t("JOYSTICKS",20,114,7,"bold",G);bar("RANGO DE PALANCA IZQUIERDA",this.data.ls.max*100,20,120,52);bar("RANGO DE PALANCA DERECHA",this.data.rs.max*100,20,132,52);
 t("DRIFT LS "+(this.data.ls.centerValue*100).toFixed(2)+"%",20,144,6.5,"bold",Y);t("DRIFT RS "+(this.data.rs.centerValue*100).toFixed(2)+"%",61,144,6.5,"bold",Y);
 t("GATILLOS",114,114,7,"bold",G);bar("LT MÁXIMO",this.data.lt.max*100,114,120,52);bar("RT MÁXIMO",this.data.rt.max*100,114,132,52);t("LT CICLOS "+this.data.lt.hits,114,144,6.5,"bold",Y);t("RT CICLOS "+this.data.rt.hits,156,144,6.5,"bold",Y);
-t("GRÁFICA COMPARATIVA DE SALUD",14,158,9,"bold");bx(14,163,182,39,P);[["JOYSTICK LS",lh],["JOYSTICK RS",rh],["GATILLO LT",this.data.lt.max*100],["GATILLO RT",this.data.rt.max*100]].forEach((v,i)=>bar(v[0],v[1],21,170+i*8,132));
+t("GRÁFICA COMPARATIVA DE SALUD",14,158,9,"bold");bx(14,163,182,39,P);[["PALANCA IZQUIERDA",lh],["PALANCA DERECHA",rh],["GATILLO LT",this.data.lt.max*100],["GATILLO RT",this.data.rt.max*100]].forEach((v,i)=>bar(v[0],v[1],21,170+i*8,132));
 t("HALLAZGOS TÉCNICOS",14,210,9,"bold");let fy=216;this.data.findings.slice(0,6).forEach(x=>{let bad=x[0]==="bad";bx(14,fy,182,6.5,bad?[255,247,247]:[247,251,248],bad?[230,185,185]:[190,218,199]);doc.setFillColor(...(bad?BAD:OK));doc.circle(18,fy+3.25,1.1,"F");t(bad?"REVISAR":"APROBADO",22,fy+4.2,5.8,"bold",bad?BAD:OK);t(fit(x[1],86),46,fy+4.2,5.8);fy+=7.5});
-ln(14,263,196,263,[205,185,125]);t("CONCLUSIÓN TÉCNICA",14,269,7,"bold",G);let c=this.data.score>=90?"Parámetros medidos dentro de comportamiento óptimo según el protocolo XE.":this.data.score>=80?"Funcionamiento general satisfactorio; considerar los hallazgos indicados.":"Valores fuera del criterio de aprobación XE. Se recomienda revisión técnica.";t(c,14,275,7);t("XE Servicio Electrónico",196,275,7,"bold",D,"right");
-doc.setFillColor(...D);doc.rect(0,284,W,13,"F");t("XE CONTROLLER LAB PRO · REPORTE GENERADO DIGITALMENTE",14,291.5,6,"bold",[175,175,175]);t("1 / 1",196,291.5,6,"bold",G,"right");
-doc.save(`XE-Controller-Lab-Pro-Reporte-${Date.now()}.pdf`)
+ln(14,263,196,263,[205,185,125]);t("CONCLUSIÓN TÉCNICA",14,269,7,"bold",G);let c=this.data.score>=90?"Parámetros medidos dentro de comportamiento óptimo según el protocolo TwinFix.":this.data.score>=80?"Funcionamiento general satisfactorio; considerar los hallazgos indicados.":"Valores fuera del criterio de aprobación XE. Se recomienda revisión técnica.";t(c,14,275,7);t("Servicio Electrónico TwinFix",196,275,7,"bold",D,"right");
+doc.setFillColor(...D);doc.rect(0,284,W,13,"F");t("Responsable Tecnico: Ing Francisco Nuñez. ·                 REPORTE GENERADO DIGITALMENTE",14,291.5,6,"bold",[175,175,175]);t("1 / 1",196,291.5,6,"bold",G,"right");
+doc.save(`Reporte-Control-TWINFIX-${Date.now()}.pdf`)
 }
 escape(s){return String(s).replace(/[&<>]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[m]))}}
 new XEControllerLabPro();
