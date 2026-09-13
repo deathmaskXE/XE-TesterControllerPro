@@ -6,9 +6,13 @@ MIT License - Copyright (c) 2024 the_al.
 See THIRD_PARTY_LICENSES.txt.
 */
 class XEDualSenseHID{
- constructor(){this.device=null;this.view=null;this.circ={l:new Set(),r:new Set()};this.wizard=null;this.bind()}
+ constructor(){this.device=null;this.view=null;this.circ={l:new Set(),r:new Set()};this.wizard=null;this.isDS4=false;this.bind()}
  bind(){
   const $=id=>document.getElementById(id);
+  $("ds5Connect").textContent="CONECTAR DUALSENSE O DUALSHOCK 4";
+  const titulo=document.querySelector("#ds5Panel .paneltitle h2"),descripcion=document.querySelector("#ds5Panel .paneltitle p");
+  if(titulo)titulo.textContent="RECALIBRAR CONTROL DUALSENSE / DUALSHOCK 4";
+  if(descripcion)descripcion.textContent="Diagn\u00f3stico y calibraci\u00f3n para controles oficiales de PS5 y PS4 conectados por USB.";
   $("ds5Connect").onclick=()=>this.connect();
   $("ds5QuickCenter").onclick=()=>this.quickCenter();
   $("ds5FourCenter").onclick=()=>this.fourCenter();
@@ -22,16 +26,16 @@ class XEDualSenseHID{
  async connect(){
   if(!("hid" in navigator)){this.log("WebHID no está disponible. Usa Chrome o Edge en PC mediante HTTPS.",true);return}
   try{
-   let devices=await navigator.hid.requestDevice({filters:[{vendorId:0x054c,productId:0x0ce6},{vendorId:0x054c,productId:0x0df2}]});
+   let devices=await navigator.hid.requestDevice({filters:[{vendorId:0x054c,productId:0x0ce6},{vendorId:0x054c,productId:0x0df2},{vendorId:0x054c,productId:0x05c4},{vendorId:0x054c,productId:0x09cc}]});
    if(!devices.length)return;
-   this.device=devices[0];if(!this.device.opened)await this.device.open();
+   this.device=devices[0];this.isDS4=[0x05c4,0x09cc].includes(this.device.productId);if(!this.device.opened)await this.device.open();
    this.device.addEventListener("inputreport",e=>this.input(e));
    document.getElementById("ds5Tools").classList.remove("hidden");
    document.getElementById("ds5State").textContent="WEBHID ACTIVO";
-   document.getElementById("ds5Model").textContent=this.device.productId===0x0df2?"DualSense Edge":"DualSense";
+   document.getElementById("ds5Model").textContent=this.isDS4?`DualShock 4 ${this.device.productId===0x09cc?"V2":"V1"}`:this.device.productId===0x0df2?"DualSense Edge":"DualSense";
    document.getElementById("ds5VidPid").textContent=`054C / ${this.device.productId.toString(16).toUpperCase().padStart(4,"0")}`;
    await this.info();
-   this.log("DualSense conectado por WebHID. Lectura HID directa activa.");
+   this.log(this.isDS4?"DualShock 4 conectado. Los botones de calibración abrirán el asistente compatible para PS4.":"DualSense conectado por WebHID. Lectura HID directa activa.");
   }catch(e){this.log("No se pudo abrir WebHID: "+e.message,true)}
  }
  featureLength(reportId){
@@ -49,7 +53,7 @@ class XEDualSenseHID{
   return 63;
  }
  async send(id,data){
-  if(!this.device?.opened)throw new Error("DualSense WebHID no conectado");
+  if(!this.device?.opened)throw new Error("Control PlayStation WebHID no conectado");
   const len=this.featureLength(id);
   const payload=new Uint8Array(len);
   payload.set(new Uint8Array(data).slice(0,len));
@@ -67,6 +71,7 @@ class XEDualSenseHID{
   if(!ok)throw new Error("Estado HID inicial inválido: "+bytes.slice(0,8).map(x=>x.toString(16).padStart(2,"0")).join(" "));
  }
  async info(){
+  if(this.isDS4){document.getElementById("ds5Board").textContent=this.device.productId===0x09cc?"DUALSHOCK 4 V2":"DUALSHOCK 4 V1";return}
   try{
    let v=await this.recv(0x20);
    if(v.byteLength>=60){
@@ -90,6 +95,7 @@ class XEDualSenseHID{
   document.getElementById(k==="l"?"ds5CircL":"ds5CircR").textContent=Math.round(this.circ[k].size/36*100)+"%";
  }
  async quickCenter(){
+  if(this.isDS4)return this.openDS4Calibration();
   try{
    this.log("No toques los joysticks. Calibrando centro...");
    await this.send(0x82,[1,1,1]);await this.assert83(1,1);
@@ -100,6 +106,7 @@ class XEDualSenseHID{
   }catch(e){this.log("Error de calibración de centro: "+e.message,true)}
  }
  async fourCenter(){
+  if(this.isDS4)return this.openDS4Calibration();
   try{
    await this.send(0x82,[1,1,1]);await this.assert83(1,1);
    this.wizard={type:"center",step:0,steps:[
@@ -111,6 +118,7 @@ class XEDualSenseHID{
   }catch(e){this.log("No se pudo iniciar la calibración: "+e.message,true)}
  }
  async range(){
+  if(this.isDS4)return this.openDS4Calibration();
   try{
    await this.send(0x82,[1,1,2]);await this.assert83(1,2);
    this.wizard={type:"range",step:0,steps:["Mueve ambos joysticks lentamente en círculos completos. Haz al menos 2 vueltas en un sentido y 2 en el contrario. Después presiona FINALIZAR RANGO."]};
@@ -137,6 +145,7 @@ class XEDualSenseHID{
  }
  endWizard(msg,bad=false){this.wizard=null;document.getElementById("ds5Wizard").classList.add("hidden");this.log(msg,bad)}
  async save(){
+  if(this.isDS4)return this.openDS4Calibration();
   try{
    this.log("Guardando calibración en memoria permanente...");
    await this.send(0x80,[3,2,101,50,64,12]);await this.recv(0x81);
@@ -144,6 +153,11 @@ class XEDualSenseHID{
    this.log("Cambios guardados permanentemente en el DualSense.");
   }catch(e){this.log("Error al guardar permanentemente: "+e.message,true)}
  }
- async reboot(){try{await this.send(0x80,[1,1]);this.log("Comando de reinicio enviado al DualSense.")}catch(e){this.log("Error al reiniciar: "+e.message,true)}}
+ openDS4Calibration(){
+  this.log("Abriendo el asistente especializado para recalibrar el DualShock 4. Mantén el control conectado por USB y no cierres la ventana durante el proceso.");
+  const nueva=window.open("https://dualshock-tools.github.io/","xeDualShock4Calibration","popup=yes,width=980,height=900");
+  if(!nueva)this.log("El navegador bloqueó la ventana. Permite ventanas emergentes y vuelve a pulsar el botón de calibración.",true);
+ }
+ async reboot(){if(this.isDS4)return this.openDS4Calibration();try{await this.send(0x80,[1,1]);this.log("Comando de reinicio enviado al DualSense.")}catch(e){this.log("Error al reiniciar: "+e.message,true)}}
 }
 window.XEDS5=new XEDualSenseHID();
