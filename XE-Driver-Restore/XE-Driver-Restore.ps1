@@ -1,7 +1,36 @@
+param([switch]$ValidateOnly)
+
 $ErrorActionPreference = "Stop"
 $Log = Join-Path $PSScriptRoot "XE-Driver-Restore.log"
 $TargetHardwareId = "VID_045E&PID_0B12"
 $TranscriptStarted = $false
+
+if ($ValidateOnly) { Write-Host "XE-Driver-Restore.ps1 syntax and startup: OK"; exit 0 }
+
+# Elevar el propio script. El BAT permanece abierto y muestra cualquier fallo.
+$currentIdentity = [Security.Principal.WindowsIdentity]::GetCurrent()
+$currentPrincipal = New-Object Security.Principal.WindowsPrincipal($currentIdentity)
+if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+  try {
+    Write-Host "Solicitando permiso de administrador..." -ForegroundColor Yellow
+    $powerShellExe = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+    $elevatedArguments = @(
+      '-NoLogo'
+      '-NoProfile'
+      '-ExecutionPolicy'
+      'Bypass'
+      '-File'
+      ('"' + $PSCommandPath + '"')
+    )
+    $elevated = Start-Process -FilePath $powerShellExe -Verb RunAs -ArgumentList $elevatedArguments -Wait -PassThru -ErrorAction Stop
+    exit $elevated.ExitCode
+  } catch {
+    Write-Host "NO SE PUDO ABRIR COMO ADMINISTRADOR: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "No se realizaron cambios en los drivers."
+    Read-Host "PRESIONA ENTER PARA VOLVER"
+    exit 3
+  }
+}
 
 function Get-DevicePropertyData {
   param([string]$InstanceId, [string]$KeyName, [switch]$AllowMissing)
@@ -38,8 +67,12 @@ function Get-Xbox1914Devices {
   $parameters = @{}
   if ($PresentOnly) { $parameters.PresentOnly = $true }
   $matches = @()
-  foreach ($device in @(Get-PnpDevice @parameters -ErrorAction SilentlyContinue)) {
-    if (-not $device.InstanceId) { continue }
+  # Filtrar primero por Instance ID evita consultar propiedades de todos los
+  # dispositivos PnP; algunos equipos se bloqueaban en esa enumeracion masiva.
+  $candidates = @(Get-PnpDevice @parameters -ErrorAction SilentlyContinue | Where-Object {
+    $_.InstanceId -and $_.InstanceId.ToUpperInvariant().Contains($TargetHardwareId)
+  })
+  foreach ($device in $candidates) {
     $hardwareIds = @(Get-DevicePropertyData -InstanceId $device.InstanceId -KeyName 'DEVPKEY_Device_HardwareIds' -AllowMissing)
     if (@($hardwareIds | Where-Object { $_ -and $_.ToUpperInvariant().Contains($TargetHardwareId) }).Count -gt 0) {
       $matches += [pscustomobject]@{ Device = $device; HardwareIds = $hardwareIds }
@@ -84,12 +117,7 @@ try {
   Write-Host "Fecha: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss K')"
   Write-Host "Windows: $([Environment]::OSVersion.VersionString)"
 
-  $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-  $principal = New-Object Security.Principal.WindowsPrincipal($identity)
-  if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    throw "El restaurador debe ejecutarse como administrador."
-  }
-
+  Write-Host "Buscando Xbox Series 1914 conectado..." -ForegroundColor Cyan
   $present = @(Get-Xbox1914Devices -PresentOnly)
   if ($present.Count -ne 1) {
     throw "No se puede identificar el control con seguridad: se requiere exactamente un dispositivo presente con Hardware ID USB VID_045E&PID_0B12. Detectados: $($present.Count)."
@@ -110,15 +138,16 @@ try {
     throw "El INF asociado a WinUSB no es un paquete OEM valido: '$winUsbInf'. No se realizaran cambios."
   }
 
-  # Un paquete OEM puede estar asignado a instancias no presentes. Se revisan todas antes de borrarlo.
+  # Consultar directamente el INF en WMI evita pedir DriverInfPath dispositivo
+  # por dispositivo, que puede bloquearse en PCs con dispositivos fantasma.
+  Write-Host "Comprobando que $winUsbInf no pertenezca a otro hardware..." -ForegroundColor Cyan
   $packageUsers = @()
-  foreach ($candidate in @(Get-PnpDevice -ErrorAction SilentlyContinue)) {
-    if (-not $candidate.InstanceId) { continue }
-    $candidateInf = Get-DevicePropertyData -InstanceId $candidate.InstanceId -KeyName 'DEVPKEY_Device_DriverInfPath' -AllowMissing
-    if ([string]$candidateInf -ine $winUsbInf) { continue }
-    $ids = @(Get-DevicePropertyData -InstanceId $candidate.InstanceId -KeyName 'DEVPKEY_Device_HardwareIds' -AllowMissing)
+  $signedDrivers = @(Get-CimInstance -ClassName Win32_PnPSignedDriver -Filter "InfName = '$winUsbInf'" -ErrorAction Stop)
+  foreach ($candidate in $signedDrivers) {
+    if (-not $candidate.DeviceID) { continue }
+    $ids = @($candidate.HardwareID)
     $isTarget = @($ids | Where-Object { $_ -and $_.ToUpperInvariant().Contains($TargetHardwareId) }).Count -gt 0
-    $packageUsers += [pscustomobject]@{ InstanceId = $candidate.InstanceId; HardwareIds = $ids; IsTarget = $isTarget }
+    $packageUsers += [pscustomobject]@{ InstanceId = $candidate.DeviceID; HardwareIds = $ids; IsTarget = $isTarget }
   }
   Write-Host "Instancias asociadas a ${winUsbInf}: $($packageUsers.Count)"
   foreach ($user in $packageUsers) {
