@@ -1,6 +1,7 @@
 $ErrorActionPreference = "Stop"
 $Log = Join-Path $PSScriptRoot "XE-Driver-Restore.log"
 $TargetHardwareId = "VID_045E&PID_0B12"
+$TranscriptStarted = $false
 
 function Get-DevicePropertyData {
   param([string]$InstanceId, [string]$KeyName, [switch]$AllowMissing)
@@ -71,8 +72,14 @@ function Write-DriverState {
   Write-Host "  INF: $($State.Inf)"
 }
 
-Start-Transcript -Path $Log -Append
 try {
+  try {
+    Start-Transcript -Path $Log -Append -ErrorAction Stop | Out-Null
+    $TranscriptStarted = $true
+  } catch {
+    Write-Host "AVISO: No se pudo abrir el log '$Log': $($_.Exception.Message)" -ForegroundColor Yellow
+    Write-Host "El diagnostico continuara visible en esta ventana."
+  }
   Write-Host "XE DRIVER RESTORE - XBOX SERIES 1914" -ForegroundColor Yellow
   Write-Host "Fecha: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss K')"
   Write-Host "Windows: $([Environment]::OSVersion.VersionString)"
@@ -170,8 +177,8 @@ try {
   Write-Host "FALLO DE RESTAURACION: $($_.Exception.Message)" -ForegroundColor Red
   Write-Host "No se eliminaran otros paquetes ni dispositivos. Revisa este log para el diagnostico completo." -ForegroundColor Red
 } finally {
-  Stop-Transcript
+  if ($TranscriptStarted) { Stop-Transcript | Out-Null }
   Write-Host ""
-  Write-Host "Log guardado en: $Log"
+  if ($TranscriptStarted) { Write-Host "Log guardado en: $Log" }
   Read-Host "PRESIONA ENTER PARA CERRAR"
 }
