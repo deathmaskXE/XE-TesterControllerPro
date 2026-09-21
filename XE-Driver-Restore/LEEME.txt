@@ -1,12 +1,14 @@
-RESTAURADOR EXCLUSIVO PARA XBOX SERIES MODELO 1914 - USB 045E:0B12
+XE DRIVER RESTORE - XBOX SERIES 1914 (045E:0B12)
 
-1. Desconecta otros controles y deja conectado solamente el Xbox Series 1914 por USB.
-2. Cierra Xbox Accessories, Steam y cualquier herramienta que utilice el control.
-3. Haz clic derecho en RESTAURAR-XBOX.bat y selecciona Ejecutar como administrador.
-4. Cuando la ventana lo solicite, escribe RESTAURAR y presiona Enter.
-5. Espera el mensaje RESTORE TERMINADO.
-6. Desconecta el control durante 5 segundos y vuelve a conectarlo.
+1. Conecta por USB un solo control Xbox Series 1914.
+2. Cierra Xbox Accessories, Steam y el navegador que uso el control.
+3. Ejecuta RESTAURAR-XBOX.bat y acepta el permiso de administrador.
+4. Revisa los datos detectados y escribe RESTAURAR cuando se solicite.
 
-El proceso acepta los distintos nodos PnP que Windows crea para el mismo control.
-La ventana permanece abierta y genera XE-Driver-Restore.log para diagnosticar cualquier error.
-Este paquete no modifica ni utiliza la restauracion del Xbox One modelo 1708.
+El restaurador solo actua si confirma el Hardware ID 045E:0B12, el servicio
+WinUSB y el paquete OEM asociado. Se detiene si ese paquete tambien pertenece
+a otro tipo de dispositivo. No presupone un numero concreto como oem7.inf.
+
+Si Windows lo solicita, desconecta el control, espera 5 segundos y vuelve a
+conectarlo. La ventana queda abierta y crea XE-Driver-Restore.log con Instance
+ID, Hardware IDs, servicio, INF, comandos, salidas, codigos y driver final.
